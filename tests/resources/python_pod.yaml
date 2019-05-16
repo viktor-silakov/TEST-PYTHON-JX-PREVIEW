@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins: slave
+  name: worker
+  namespace: je-mm-arquitectura
+spec:
+  containers:
+
+  - name: python
+    image: globaldevtools.bbva.com:5000/hub/gsp/desarrollo/fusion/devops-python-tests:0.0.1
+    args:
+    - cat
+    command:
+    - /bin/sh
+    - -c
+    tty: true
+    env:
+    - name: GIT_AUTHOR_EMAIL
+      value: pendragon@paradigmadigital.com
+    - name: GIT_COMMITTER_EMAIL
+      value: pendragon@paradigmadigital.com
+    - name: GIT_COMMITTER_NAME
+      value: jenkins-x-bot
+    - name: GIT_AUTHOR_NAME
+      value: jenkins-x-bot
+    - name: XDG_CONFIG_HOME
+      value: /home/jenkins
+    - name: HOME
+      value: /home/jenkins
+    workingDir: /home/jenkins
+  - name: jenkins
+    image: globaldevtools.bbva.com:5000/hub/gsp/desarrollo/fusion/devops-jenkins:0.0.5
+    args:
+    - cat
+    command:
+    - /bin/sh
+    - -c
+    tty: true
+    env:
+    - name: GIT_AUTHOR_EMAIL
+      value: pendragon@paradigmadigital.com
+    - name: GIT_COMMITTER_EMAIL
+      value: pendragon@paradigmadigital.com
+    - name: GIT_COMMITTER_NAME
+      value: jenkins-x-bot
+    - name: GIT_AUTHOR_NAME
+      value: jenkins-x-bot
+    - name: XDG_CONFIG_HOME
+      value: /home/jenkins
+    - name: HOME
+      value: /home/jenkins
+    workingDir: /home/jenkins
+  imagePullSecrets:
+  - name: registrypullsecret

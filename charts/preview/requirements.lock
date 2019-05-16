@@ -1,18 +1,15 @@
-
 dependencies:
-- alias: expose
-  name: exposecontroller
+- name: exposecontroller
   repository: http://chartmuseum.jenkins-x.io
   version: 2.3.56
-- alias: cleanup
-  name: exposecontroller
+- name: exposecontroller
   repository: http://chartmuseum.jenkins-x.io
   version: 2.3.56
-- alias: kafka
-  name: kafka
+- name: kafka
   repository: http://storage.googleapis.com/kubernetes-charts-incubator
   version: 0.11.1
-- alias: preview
-  name: test-cilib
+- name: test-cilib
   repository: file://../test-cilib
-  version: 1.0
+  version: "1"
+digest: sha256:87e48587703aab7be19c476ec33cd2569b9515ba09c73a4b536386af5f167f24
+generated: 2019-05-16T13:26:04.319203+03:00

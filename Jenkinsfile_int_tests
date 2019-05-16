@@ -1,0 +1,231 @@
+/**
+ * This pipeline is created for `devops-ci-lib` integration testing
+ * */
+@Library('devops-ci-lib@paragate')
+import org.devops.Constants
+import org.devops.Utills
+
+import groovy.json.JsonSlurperClassic
+
+cluster = "globaldevtools"
+label = 'python'
+pod_template = cloudInfo.template(cluster, [label,])
+pod_cloud = cloudInfo.cloud(cluster)
+
+// test properties
+// we cannot use constants settings because local registry has other security settings
+DOCKER_REGISTRY_DOMAIN = 'docker-registry.jx.35.244.82.27.nip.io'
+ARTIFACTORY_API_URL = "http://35.200.214.167:80/artifactory/api"
+
+pipeline {
+    agent {
+        kubernetes {
+            cloud pod_cloud
+            label label
+            yaml pod_template
+        }
+    }
+    environment {
+        ORG = 'test-arttifacts' // artifact repo
+        APP_NAME = 'test-cilib'
+        version = VersionNumber(versionNumberString: '${BUILD_YEAR}.${BUILD_MONTH}-rc-${BUILDS_THIS_MONTH}')
+    }
+
+    stages {
+        stage('Create Release') {
+            steps {
+                script {
+                    echo "Build Release ${ORG}/${APP_NAME}/${version}"
+                    old_version = readFile('VERSION').trim()
+                    echo "OLD_VERSION: '${old_version}'"
+                    release.setVersion(version)
+                    sh "cat VERSION"
+                    old_chart = sh(returnStdout: true, script: 'cat ./charts/test-cilib/Chart.yaml')
+                    old_values = sh(returnStdout: true, script: 'cat ./charts/test-cilib/values.yaml')
+                    release.setTag(version)
+                    new_chart = sh(returnStdout: true, script: 'cat ./charts/test-cilib/Chart.yaml')
+                    new_values = sh(returnStdout: true, script: 'cat ./charts/test-cilib/values.yaml')
+                }
+            }
+        }
+
+        stage("TEST: 'Create Release' stage") {
+            stages {
+                stage("TEST: check setversion method") {
+                    steps {
+                        script {
+                            new_version = readFile('VERSION').trim()
+                            echo "new version from file is: ${new_version}"
+
+                            echo "Check if new version: '${new_version}' is not empty"
+                            assert !new_version.empty
+
+                            echo "Check if new version is properly formad"
+                            echo "${(new_version.split('-'))}"
+                            assert new_version != old_version
+                            echo "${(new_version.split('-'))[0]}"
+                            echo "${(new Date()[Calendar.YEAR])}.${(new Date()[Calendar.MONTH])}"
+                            assert (new_version.split('-'))[0] == "${(new Date()[Calendar.YEAR])}.${(new Date()[Calendar.MONTH] + 1)}"
+                            assert (new_version.split('-'))[1] == 'rc'
+                            assert !(new_version.split('-'))[2].isEmpty()
+
+                            echo "Check if tags contains new version"
+                            withCredentials([
+                                    sshUserPrivateKey(credentialsId: Constants.CREDENTIALS_BITBUCKET, keyFileVariable: 'gsp_bitbucket_keyfile')
+                            ]) {
+                                sh '''
+                                export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i ${gsp_bitbucket_keyfile}"
+                                git pull
+                                '''
+                            }
+                            tags = sh(returnStdout: true, script: 'git tag').split("\n")
+                            echo "TAGS: ${tags}"
+                            assert tags.contains(new_version)
+                        }
+                    }
+                }
+                stage("TEST: check setTag method") {
+                    steps {
+                        script {
+                            assert old_values != new_values
+                            assert old_chart != new_chart
+                            def new_values_map = Utills.yamlToMap(new_values)
+                            def new_chart_map = Utills.yamlToMap(new_chart)
+                            echo "${new_chart_map.version}"
+                            echo "${new_values_map.image.tag}"
+                            assert new_chart_map.version == new_version
+                            assert new_values_map.image.tag == new_version
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Build Release') {
+            steps {
+                script {
+                    sh "ls"
+                    release.build(ORG, APP_NAME, version)
+                }
+            }
+        }
+
+        stage("TEST: 'Build Release' stage") {
+            stages {
+                stage("TEST: check build for k8s") {
+                    steps {
+                        script {
+                            imageUrl = "http://${DOCKER_REGISTRY_DOMAIN}/v2/${APP_NAME}/tags/list"
+                            content = (new URL(imageUrl)).getText()
+                            echo content
+                            imageInfo = jsonToObject(content)
+                            echo "imageInfo.tags: ${imageInfo.tags}"
+                            echo "version: ${version}"
+                            assert imageInfo.tags.contains(version)
+                        }
+                    }
+                }
+
+                stage("TEST: check build for AWS") {
+                    steps {
+                        script {
+                            log.warn "there is no build for AWS test!"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage("Promote to Environments") {
+            steps {
+                script {
+                    cd.promote(ORG, APP_NAME)
+                }
+            }
+        }
+
+        stage('build integration tests') {
+            stages {
+                stage("check templates") {
+                    steps {
+                        script {
+                            def sample_template = readFile("tests/resources/python_pod.yaml")
+                            echo "'${sample_template}'"
+                            echo "'${pod_template}'"
+                            assert pod_template == sample_template
+                            assert pod_cloud == "kubernetes"
+                        }
+                    }
+                }
+
+                stage("check application helm chart") {
+                    steps {
+                        container('jenkins') {
+                            script {
+                                def storage = "helm-test-upload"
+                                def filename = "${APP_NAME}-${version}.tgz"
+
+                                withCredentials([
+                                        [$class          : 'UsernamePasswordMultiBinding', credentialsId: 'bot-artifactory',
+                                         usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']
+                                ]) {
+                                    def uri = "${ARTIFACTORY_API_URL}/storage/${storage}/${filename}"
+                                    def artInfo = sh returnStdout: true,
+                                            script: 'curl -f -u${USERNAME}:${PASSWORD} -X GET  ' + uri
+                                    echo artInfo
+                                    artObj = jsonToObject(artInfo)
+
+                                    assert artObj.uri == uri
+                                }
+                            }
+                        }
+                    }
+                }
+                stage("check integration environment requirements") {
+                    steps {
+                        container('jenkins') {
+                            script {
+                                def ARTIFACTORY_API_URL = "http://35.200.214.167:80/artifactory/api"
+                                def storage = "helm-test-upload"
+
+                                echo "check a local requirements yaml"
+                                def content = readFile "environment/env/requirements.yaml"
+                                echo content
+                                Map yamlObj = Utills.yamlToMap(content)
+                                def dep = yamlObj.dependencies.findAll { it.name == APP_NAME }
+                                assert dep[0].name == APP_NAME
+                                assert dep[0].version == version
+                                assert dep[0].repository == Constants.REPOSITORY_HELM_DOWNLOAD
+
+                                echo "check a pushed remote requirements yaml"
+                                def new_requirements
+                                withCredentials([
+                                        sshUserPrivateKey(credentialsId: Constants.CREDENTIALS_BITBUCKET, keyFileVariable: 'gsp_bitbucket_keyfile')
+                                ]) {
+                                    withEnv(["GIT_SSH_COMMAND=ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i ${gsp_bitbucket_keyfile}"]) {
+                                        dir("${env.WORKSPACE}/environment") {
+                                            sh "pwd"
+                                            sh 'git fetch'
+                                            new_requirements = sh returnStdout: true, script: 'git show origin/master:env/requirements.yaml'
+                                            echo new_requirements
+                                        }
+                                    }
+                                }
+
+                                def new_requirements_map = Utills.yamlToMap(new_requirements)
+                                def new_dep = new_requirements_map.dependencies.findAll { it.name == APP_NAME }
+                                assert new_dep[0].name == APP_NAME
+                                assert new_dep[0].version == version
+                                assert new_dep[0].repository == Constants.REPOSITORY_HELM_DOWNLOAD
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+Object jsonToObject(json) {
+    (new groovy.json.JsonSlurperClassic()).parseText(json)
+}
