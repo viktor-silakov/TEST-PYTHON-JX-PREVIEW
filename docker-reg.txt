@@ -1,0 +1,28 @@
+{
+    "apiVersion": "v1",
+    "data": {
+        "haSharedSecret": "c1hGREhXUTJKR1RIc2MwSw=="
+    },
+    "kind": "Secret",
+    "metadata": {
+        "annotations": {
+            "jenkins.io/chart": "jenkins-x-platform",
+            "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"data\":{\"haSharedSecret\":\"c1hGREhXUTJKR1RIc2MwSw==\"},\"kind\":\"Secret\",\"metadata\":{\"annotations\":{\"jenkins.io/chart\":\"jenkins-x-platform\"},\"labels\":{\"app\":\"docker-registry\",\"chart\":\"docker-registry-1.5.0\",\"heritage\":\"Tiller\",\"jenkins.io/chart-release\":\"jenkins-x\",\"jenkins.io/version\":\"2.0.106\",\"release\":\"jenkins-x\"},\"name\":\"jenkins-x-docker-registry-secret\",\"namespace\":\"jx\"},\"type\":\"Opaque\"}\n"
+        },
+        "creationTimestamp": "2019-04-23T15:09:37Z",
+        "labels": {
+            "app": "docker-registry",
+            "chart": "docker-registry-1.5.0",
+            "heritage": "Tiller",
+            "jenkins.io/chart-release": "jenkins-x",
+            "jenkins.io/version": "2.0.106",
+            "release": "jenkins-x"
+        },
+        "name": "jenkins-x-docker-registry-secret",
+        "namespace": "jx",
+        "resourceVersion": "234432",
+        "selfLink": "/api/v1/namespaces/jx/secrets/jenkins-x-docker-registry-secret",
+        "uid": "cf74df17-65d9-11e9-9317-42010aa0013c"
+    },
+    "type": "Opaque"
+}

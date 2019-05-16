@@ -1,0 +1,28 @@
+{
+    "apiVersion": "v1",
+    "data": {
+        "password": "N3lYYmJMVTFlbC1sZjdoLW1Yczk="
+    },
+    "kind": "Secret",
+    "metadata": {
+        "annotations": {
+            "jenkins.io/chart": "jenkins-x-platform",
+            "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"data\":{\"password\":\"N3lYYmJMVTFlbC1sZjdoLW1Yczk=\"},\"kind\":\"Secret\",\"metadata\":{\"annotations\":{\"jenkins.io/chart\":\"jenkins-x-platform\"},\"labels\":{\"app\":\"jenkins-x-nexus\",\"chart\":\"nexus-0.1.7\",\"heritage\":\"Tiller\",\"jenkins.io/chart-release\":\"jenkins-x\",\"jenkins.io/version\":\"2.0.106\",\"release\":\"jenkins-x\"},\"name\":\"nexus\",\"namespace\":\"jx\"},\"type\":\"Opaque\"}\n"
+        },
+        "creationTimestamp": "2019-04-23T15:10:54Z",
+        "labels": {
+            "app": "jenkins-x-nexus",
+            "chart": "nexus-0.1.7",
+            "heritage": "Tiller",
+            "jenkins.io/chart-release": "jenkins-x",
+            "jenkins.io/version": "2.0.106",
+            "release": "jenkins-x"
+        },
+        "name": "nexus",
+        "namespace": "jx",
+        "resourceVersion": "234773",
+        "selfLink": "/api/v1/namespaces/jx/secrets/nexus",
+        "uid": "fd994845-65d9-11e9-9317-42010aa0013c"
+    },
+    "type": "Opaque"
+}
