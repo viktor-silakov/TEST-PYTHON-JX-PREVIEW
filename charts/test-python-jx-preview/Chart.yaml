@@ -1,4 +1,4 @@
 apiVersion: v1
 description: A Helm chart for Kubernetes
-name: test-cilib
+name: test-python-jx-preview
 version: 1.0.0
